@@ -1,663 +1,526 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vidya | Online Tuition Platform</title>
-    <!-- Load Tailwind CSS for modern, dark-themed styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Custom Styles to enforce dark theme look and feel */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a1a1a;
-            color: #f0f0f0;
-        }
-        /* Style for the main container to shift content for the sidebar */
-        .content-area {
-            min-height: calc(100vh - 80px); /* Full height minus header */
-            transition: margin-left 0.3s ease;
-        }
-        /* Sidebar transition effect */
-        .sidebar {
-            width: 250px;
-            transition: transform 0.3s ease;
-            transform: translateX(0);
-        }
-        /* Hidden state for sidebar */
-        .sidebar.hidden {
-            transform: translateX(-100%);
-        }
-        /* Body shift when sidebar is visible */
-        #page-wrapper.sidebar-open .content-area {
-            margin-left: 250px;
-        }
-        /* Custom scrollbar for dark theme */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #2d2d2d;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4a4a4a;
-            border-radius: 4px;
-        }
-        .nav-link.active {
-            background-color: #333333;
-            border-left: 4px solid #06B6D4; /* Cyan accent */
-        }
-        .content-card {
-            border-left: 5px solid #06B6D4;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vidya — Tuition Platform</title>
+  <!-- Tailwind CDN for quick styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Small custom tweaks on top of Tailwind for a modern black theme */
+    :root{
+      --accent: #06b6d4; /* cyan */
+      --bg: #0b0b0d;
+      --panel: #111214;
+      --muted: #9ca3af;
+    }
+    body{background:linear-gradient(180deg,#070707 0%, #0d0d0f 100%); color: #e6eef0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    .glass{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.03)}
+    .accent{color:var(--accent)}
+    .accent-bg{background:linear-gradient(90deg,#075985,#06b6d4)}
+    .truncate-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    a{color:var(--accent)}
+    /* scrollbar */
+    ::-webkit-scrollbar{width:10px}
+    ::-webkit-scrollbar-thumb{background:#1f2937;border-radius:6px}
+  </style>
 </head>
-<body class="bg-gray-900 text-gray-100 antialiased">
+<body class="min-h-screen">
+  <!-- App wrapper -->
+  <div id="app" class="flex">
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-72 min-h-screen p-4 glass hidden lg:block">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-700 to-cyan-400 flex items-center justify-center font-bold">V</div>
+        <div>
+          <div id="sideName" class="font-semibold">Guest</div>
+          <div id="sideEmail" class="text-sm text-gray-400">Not signed in</div>
+        </div>
+      </div>
 
-    <!-- Global container for sidebar transition -->
-    <div id="page-wrapper" class="sidebar-open">
-        
-        <!-- HEADER (Fixed Top Nav) -->
-        <header class="fixed top-0 left-0 right-0 h-16 bg-gray-800 shadow-xl z-50 flex items-center justify-between px-4 lg:px-6">
-            <div class="flex items-center space-x-4">
-                <button id="sidebarToggle" class="text-white hover:text-cyan-400 transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-                <h1 class="text-xl lg:text-2xl font-bold text-cyan-400">Vidya Tuition Platform</h1>
-            </div>
+      <nav class="space-y-1">
+        <button data-page="dashboard" class="nav-btn w-full text-left p-3 rounded-md hover:bg-gray-800">Dashboard</button>
+        <button data-page="videos" class="nav-btn w-full text-left p-3 rounded-md hover:bg-gray-800">Online Videos</button>
+        <button data-page="tutes" class="nav-btn w-full text-left p-3 rounded-md hover:bg-gray-800">Tuition Notes (Tutes)</button>
+        <button data-page="profile" class="nav-btn w-full text-left p-3 rounded-md hover:bg-gray-800">Profile & Security</button>
+      </nav>
 
-            <div id="authStatus" class="flex items-center space-x-3">
-                <!-- Content injected by JavaScript -->
-            </div>
-        </header>
+      <div class="mt-auto pt-6">
+        <button id="signOutSidebar" class="w-full py-2 px-3 bg-red-600 rounded-md hover:bg-red-700">Sign out</button>
+      </div>
+    </aside>
 
-        <!-- SIDEBAR (Navigation Menu) -->
-        <nav id="sidebar" class="sidebar fixed top-0 left-0 h-screen pt-16 bg-gray-800 z-40 shadow-2xl flex flex-col">
-            <div class="p-4 border-b border-gray-700">
-                <p id="userNameDisplay" class="font-semibold text-lg"></p>
-                <p id="userEmailDisplay" class="text-sm text-gray-400"></p>
-            </div>
-            <div class="flex-grow overflow-y-auto">
-                <a href="#dashboard" data-page="dashboard" class="nav-link flex items-center space-x-3 p-4 text-sm font-medium hover:bg-gray-700 active transition duration-150">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#videos" data-page="videos" class="nav-link flex items-center space-x-3 p-4 text-sm font-medium hover:bg-gray-700 transition duration-150">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    <span>Online Videos</span>
-                </a>
-                <a href="#tutes" data-page="tutes" class="nav-link flex items-center space-x-3 p-4 text-sm font-medium hover:bg-gray-700 transition duration-150">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <span>Tuition Notes (Tutes)</span>
-                </a>
-                <a href="#profile" data-page="profile" class="nav-link flex items-center space-x-3 p-4 text-sm font-medium hover:bg-gray-700 transition duration-150">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0112 0 4 4 01-4 4zm-7 0a4 4 0112 0 4 4 01-4 4zm-7 0a4 4 0112 0 4 4 01-4 4zm-7 0a4 4 0112 0 4 4 01-4 4zM4 16v-1a4 4 0014-4h2"></path></svg>
-                    <span>Profile & Security</span>
-                </a>
-            </div>
-            <button id="signOutBtnSidebar" class="w-full p-4 bg-red-700 hover:bg-red-600 transition font-medium text-sm mt-auto">Sign Out</button>
-        </nav>
+    <!-- MAIN -->
+    <div class="flex-1">
+      <!-- HEADER -->
+      <header class="flex items-center justify-between p-4 glass">
+        <div class="flex items-center gap-3">
+          <button id="mobileMenu" class="lg:hidden p-2 rounded-md glass">☰</button>
+          <h1 class="text-xl font-bold accent">Vidya — Tuition Platform</h1>
+        </div>
+        <div id="authArea" class="flex items-center gap-3">
+          <!-- Filled dynamically -->
+        </div>
+      </header>
 
-        <!-- MAIN CONTENT AREA -->
-        <main class="content-area pt-20 p-4 lg:p-8">
-            <div id="alertContainer" class="fixed top-20 right-4 w-full max-w-sm z-50"></div>
-            <div id="appContent">
-                <!-- All Page Content will be rendered here by JavaScript -->
-            </div>
-        </main>
+      <!-- CONTENT -->
+      <main id="content" class="p-6 lg:p-10">
+        <!-- Content injected by JS -->
+      </main>
     </div>
+  </div>
 
-    <!-- FIREBASE SDKs (Must use the full, combined SDK for compatibility) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  <!-- Toasts -->
+  <div id="toastContainer" class="fixed top-6 right-6 space-y-2 z-50"></div>
 
-        // Set Firebase Log Level to Debug for development visibility
-        setLogLevel('Debug');
+  <!-- FIREBASE + APP LOGIC -->
+  <script type="module">
+    // ----------------------------
+    // Replace the values below with your Firebase project's config.
+    // You provided a Realtime DB URL; I've put it into databaseURL already.
+    // You must still fill apiKey, authDomain, projectId, etc. to enable Auth.
+    // ----------------------------
 
-        // --- GLOBAL VARIABLES (MANDATORY INJECTED VALUES) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-tuition-app';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    import { initializeApp, setLogLevel } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getDatabase, ref, push, set, onValue, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js';
 
-        // --- FIREBASE INITIALIZATION ---
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        // We use Firestore for structured data storage (Users, Content metadata)
-        const db = getFirestore(app);
+    setLogLevel('debug');
 
-        // --- STATE VARIABLES ---
-        let currentUserId = null;
-        let userData = {};
-        let currentView = 'login'; // Tracks the current page/view
+    // --- Firebase config ---
+    const firebaseConfig = {
+      apiKey: "REPLACE_WITH_YOUR_API_KEY",
+      authDomain: "REPLACE_WITH_YOUR_PROJECT.firebaseapp.com",
+      projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
+      storageBucket: "REPLACE_WITH_YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID",
+      databaseURL: "https://minibotproject2-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
 
-        // --- DOM ELEMENTS ---
-        const appContent = document.getElementById('appContent');
-        const authStatusDiv = document.getElementById('authStatus');
-        const alertContainer = document.getElementById('alertContainer');
-        const sidebar = document.getElementById('sidebar');
-        const pageWrapper = document.getElementById('page-wrapper');
-        const userNameDisplay = document.getElementById('userNameDisplay');
-        const userEmailDisplay = document.getElementById('userEmailDisplay');
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-        // --- UTILITY FUNCTIONS ---
+    // ----------------------------
+    // Small UI utilities
+    // ----------------------------
+    function toast(msg, type='info'){
+      const c = document.createElement('div');
+      c.className = 'px-4 py-2 rounded-md shadow-md glass';
+      c.textContent = msg;
+      document.getElementById('toastContainer').appendChild(c);
+      setTimeout(()=>{ c.remove(); }, 4000);
+    }
 
-        /**
-         * Shows a transient, styled alert message.
-         * @param {string} message - The message to display.
-         * @param {string} type - 'success', 'error', or 'info'.
-         */
-        function showAlert(message, type = 'info') {
-            const colors = {
-                success: 'bg-green-600',
-                error: 'bg-red-600',
-                info: 'bg-cyan-600'
-            };
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `p-3 mb-3 rounded-lg shadow-lg text-white ${colors[type]} transition-all duration-300 transform translate-y-0 opacity-100`;
-            alertDiv.textContent = message;
+    function el(html){ const wrap = document.createElement('div'); wrap.innerHTML = html.trim(); return wrap.firstChild; }
 
-            alertContainer.appendChild(alertDiv);
+    // ----------------------------
+    // Simple client-side router
+    // ----------------------------
+    let currentPage = 'login';
+    function navigate(page){ currentPage = page; render(); window.scrollTo(0,0); }
 
-            // Hide and remove after 4 seconds
-            setTimeout(() => {
-                alertDiv.classList.add('opacity-0', 'translate-y-4');
-                setTimeout(() => alertDiv.remove(), 500);
-            }, 4000);
-        }
+    // ----------------------------
+    // DOM refs
+    // ----------------------------
+    const content = document.getElementById('content');
+    const authArea = document.getElementById('authArea');
+    const sideName = document.getElementById('sideName');
+    const sideEmail = document.getElementById('sideEmail');
+    const sidebar = document.getElementById('sidebar');
 
-        /**
-         * Clears all content from the main area and sets the page title.
-         * @param {string} title - The title of the page to display.
-         */
-        function renderPageHeader(title) {
-            appContent.innerHTML = `<h2 class="text-3xl font-extrabold text-cyan-400 mb-6">${title}</h2>`;
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-                if (link.dataset.page === currentView) {
-                    link.classList.add('active');
-                }
-            });
-        }
+    // Mobile menu
+    document.getElementById('mobileMenu').addEventListener('click', ()=> sidebar.classList.toggle('hidden'));
 
-        // --- NAVIGATION & ROUTING ---
+    // ----------------------------
+    // Auth actions
+    // ----------------------------
+    async function handleRegister(e){
+      e.preventDefault();
+      const email = e.target.email.value.trim();
+      const pass = e.target.password.value;
+      const fullName = e.target.name.value.trim();
+      try{
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(cred.user, { displayName: fullName });
+        toast('Registration successful');
+      }catch(err){ toast('Register error: ' + err.message); }
+    }
 
-        /**
-         * Renders the current view based on the currentView state.
-         */
-        function navigateTo(view) {
-            currentView = view;
-            if (currentUserId) {
-                // Authenticated routes
-                switch (view) {
-                    case 'dashboard': renderDashboard(); break;
-                    case 'videos': renderVideosPage(); break;
-                    case 'tutes': renderTutesPage(); break;
-                    case 'profile': renderProfilePage(); break;
-                    default: renderDashboard();
-                }
-            } else {
-                // Public routes
-                switch (view) {
-                    case 'register': renderRegister(); break;
-                    case 'login': renderLogin(); break;
-                    default: renderLogin();
-                }
-            }
-        }
+    async function handleLogin(e){
+      e.preventDefault();
+      const email = e.target.email.value.trim();
+      const pass = e.target.password.value;
+      try{
+        await signInWithEmailAndPassword(auth, email, pass);
+        toast('Login successful');
+      }catch(err){ toast('Login error: ' + err.message); }
+    }
 
-        /**
-         * Event listener for sidebar navigation links.
-         */
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const view = link.dataset.page;
-                navigateTo(view);
-            });
+    async function handleSignOut(){
+      try{ await signOut(auth); toast('Signed out'); }catch(err){ toast('Sign out failed: '+err.message); }
+    }
+
+    // ----------------------------
+    // Realtime DB: add video / tute
+    // ----------------------------
+    async function addVideo(data){
+      const node = ref(db, 'videos');
+      const newRef = push(node);
+      await set(newRef, data);
+    }
+    async function addTute(data){
+      const node = ref(db, 'tutes');
+      const newRef = push(node);
+      await set(newRef, data);
+    }
+
+    // ----------------------------
+    // Renderers for each page
+    // ----------------------------
+    function renderLogin(){
+      content.innerHTML = `
+        <div class="max-w-xl mx-auto bg-black/40 p-6 rounded-lg glass">
+          <h2 class="text-2xl font-bold accent mb-4">Sign in to Vidya</h2>
+          <form id="formLogin" class="space-y-3">
+            <input name="email" required type="email" placeholder="Email" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="password" required type="password" placeholder="Password" class="w-full p-3 rounded bg-gray-900/60" />
+            <button class="w-full py-3 rounded accent-bg text-black font-semibold">Sign in</button>
+          </form>
+          <div class="mt-4 text-sm text-gray-400">No account? <a href="#" id="toReg">Register</a></div>
+        </div>
+      `;
+      document.getElementById('formLogin').addEventListener('submit', handleLogin);
+      document.getElementById('toReg').addEventListener('click', (ev)=>{ ev.preventDefault(); navigate('register'); });
+    }
+
+    function renderRegister(){
+      content.innerHTML = `
+        <div class="max-w-xl mx-auto bg-black/40 p-6 rounded-lg glass">
+          <h2 class="text-2xl font-bold accent mb-4">Create an account</h2>
+          <form id="formReg" class="space-y-3">
+            <input name="name" required placeholder="Full name" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="email" required type="email" placeholder="Email" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="password" required type="password" minlength="6" placeholder="Password" class="w-full p-3 rounded bg-gray-900/60" />
+            <button class="w-full py-3 rounded accent-bg text-black font-semibold">Create account</button>
+          </form>
+          <div class="mt-4 text-sm text-gray-400">Already have an account? <a href="#" id="toLogin">Sign in</a></div>
+        </div>
+      `;
+      document.getElementById('formReg').addEventListener('submit', handleRegister);
+      document.getElementById('toLogin').addEventListener('click', (ev)=>{ ev.preventDefault(); navigate('login'); });
+    }
+
+    function renderDashboard(){
+      content.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-black/40 p-6 rounded glass">
+            <h2 class="text-2xl font-bold accent mb-3">Welcome back, <span id="dashName">User</span></h2>
+            <p class="text-gray-400 mb-6">This dashboard gives quick access to videos and tutes.
+            Use the buttons below to add new content (you must be authenticated).</p>
+
+            <div class="flex gap-3">
+              <button id="btnNewVideo" class="py-2 px-4 rounded bg-cyan-600 hover:bg-cyan-700">Add Video</button>
+              <button id="btnNewTute" class="py-2 px-4 rounded bg-cyan-600 hover:bg-cyan-700">Add Tute</button>
+            </div>
+
+            <section class="mt-6">
+              <h3 class="font-semibold mb-2">Latest Videos</h3>
+              <div id="dashVideos" class="space-y-3"></div>
+            </section>
+
+            <section class="mt-6">
+              <h3 class="font-semibold mb-2">Latest Tutes</h3>
+              <div id="dashTutes" class="space-y-3"></div>
+            </section>
+          </div>
+
+          <aside class="bg-black/40 p-6 rounded glass">
+            <h3 class="font-semibold mb-3">Quick Profile</h3>
+            <div id="miniProfile" class="text-sm text-gray-300">Loading...</div>
+          </aside>
+        </div>
+      `;
+
+      document.getElementById('btnNewVideo').addEventListener('click', ()=> showAddVideoModal());
+      document.getElementById('btnNewTute').addEventListener('click', ()=> showAddTuteModal());
+
+      // Populate latest lists from DB
+      const vq = query(ref(db, 'videos'), orderByChild('createdAt'), limitToLast(6));
+      onValue(vq, (snap)=>{
+        const out = document.getElementById('dashVideos');
+        out.innerHTML = '';
+        snap.forEach(s => {
+          const d = s.val();
+          const item = document.createElement('div');
+          item.className = 'p-3 bg-gray-900/40 rounded';
+          item.innerHTML = `<div class=\"flex justify-between items-start\"><div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a class=\"text-sm text-cyan-400\" href=\"${escapeHtml(d.url)}\" target=\"_blank\">Watch</a></div>`;
+          out.prepend(item);
         });
+      });
 
-        // --- AUTHENTICATION HANDLERS ---
-
-        /**
-         * Handles user registration.
-         */
-        async function handleRegister(e) {
-            e.preventDefault();
-            const email = e.target.email.value;
-            const password = e.target.password.value;
-            const fullName = e.target.fullName.value;
-
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                // 1. Update user profile (display name)
-                await updateProfile(user, { displayName: fullName });
-
-                // 2. Create user document in Firestore for custom data
-                const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/user_data`, 'profile');
-                await setDoc(userDocRef, {
-                    fullName: fullName,
-                    email: user.email,
-                    registeredAt: new Date().toISOString()
-                }, { merge: true });
-
-                showAlert('Registration successful! Welcome.', 'success');
-                // The onAuthStateChanged listener handles navigation to the dashboard
-            } catch (error) {
-                showAlert(`Registration Failed: ${error.message}`, 'error');
-            }
-        }
-
-        /**
-         * Handles user login.
-         */
-        async function handleLogin(e) {
-            e.preventDefault();
-            const email = e.target.email.value;
-            const password = e.target.password.value;
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                showAlert('Login successful.', 'success');
-                // The onAuthStateChanged listener handles navigation to the dashboard
-            } catch (error) {
-                showAlert(`Login Failed: ${error.message}`, 'error');
-            }
-        }
-
-        /**
-         * Handles user sign out.
-         */
-        async function handleSignOut() {
-            try {
-                await signOut(auth);
-                showAlert('You have been logged out.', 'info');
-                // The onAuthStateChanged listener handles navigation back to login
-            } catch (error) {
-                showAlert(`Sign out failed: ${error.message}`, 'error');
-            }
-        }
-
-        // --- FIREBASE AUTH STATE LISTENER (CORE LOGIC) ---
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // User is signed in
-                currentUserId = user.uid;
-                
-                // Fetch custom user data from Firestore
-                const profileDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/user_data`, 'profile');
-                try {
-                    const docSnap = await getDoc(profileDocRef);
-                    userData = docSnap.exists() ? docSnap.data() : { fullName: user.displayName || 'Student' };
-                } catch(e) {
-                    console.error("Error fetching user data:", e);
-                    userData = { fullName: user.displayName || 'Student' };
-                }
-
-                // Update UI elements for authenticated state
-                authStatusDiv.innerHTML = `<button id="signOutBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150">Sign Out</button>`;
-                document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
-                document.getElementById('signOutBtnSidebar').addEventListener('click', handleSignOut);
-                
-                sidebar.classList.remove('hidden');
-                pageWrapper.classList.add('sidebar-open');
-                userNameDisplay.textContent = userData.fullName || user.email;
-                userEmailDisplay.textContent = user.email;
-
-                // Navigate to the dashboard if not already on an authenticated page
-                if (currentView === 'login' || currentView === 'register') {
-                    navigateTo('dashboard');
-                } else {
-                    navigateTo(currentView); // Re-render current page with new data
-                }
-
-            } else {
-                // User is signed out
-                currentUserId = null;
-                userData = {};
-
-                // Update UI elements for public state
-                authStatusDiv.innerHTML = `
-                    <button onclick="navigateTo('login')" class="bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150">Login</button>
-                    <button onclick="navigateTo('register')" class="text-cyan-400 hover:text-cyan-300 font-medium py-2 px-4 transition duration-150">Register</button>
-                `;
-                sidebar.classList.add('hidden');
-                pageWrapper.classList.remove('sidebar-open');
-                
-                navigateTo('login');
-            }
+      const tq = query(ref(db, 'tutes'), orderByChild('createdAt'), limitToLast(6));
+      onValue(tq, (snap)=>{
+        const out = document.getElementById('dashTutes');
+        out.innerHTML = '';
+        snap.forEach(s => {
+          const d = s.val();
+          const item = document.createElement('div');
+          item.className = 'p-3 bg-gray-900/40 rounded flex justify-between items-center';
+          item.innerHTML = `<div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a class=\"text-sm text-cyan-400\" href=\"${escapeHtml(d.url)}\" target=\"_blank\">Open</a>`;
+          out.prepend(item);
         });
+      });
+    }
 
-        // --- PAGE RENDERING FUNCTIONS ---
+    function renderVideos(){
+      content.innerHTML = `
+        <div class="max-w-4xl mx-auto space-y-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-2xl font-bold accent">Online Videos</h2>
+            <button id="addVideoBtn" class="py-2 px-4 rounded bg-cyan-600">Add Video</button>
+          </div>
 
-        function renderLogin() {
-            appContent.innerHTML = `
-                <div class="max-w-md mx-auto bg-gray-800 p-8 rounded-xl shadow-2xl mt-16">
-                    <h2 class="text-3xl font-extrabold text-white mb-6 text-center">Student Login</h2>
-                    <form id="loginForm" class="space-y-6">
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-400">Email Address</label>
-                            <input type="email" id="email" name="email" required class="mt-1 block w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                        </div>
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-gray-400">Password</label>
-                            <input type="password" id="password" name="password" required class="mt-1 block w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                        </div>
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 transition duration-150">Sign In</button>
-                    </form>
-                    <p class="mt-4 text-center text-sm text-gray-400">
-                        Don't have an account? <a href="#" onclick="navigateTo('register')" class="font-medium text-cyan-400 hover:text-cyan-300">Register here</a>
-                    </p>
-                </div>
-            `;
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
-        }
+          <div id="videosGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+      `;
 
-        function renderRegister() {
-             appContent.innerHTML = `
-                <div class="max-w-md mx-auto bg-gray-800 p-8 rounded-xl shadow-2xl mt-16">
-                    <h2 class="text-3xl font-extrabold text-white mb-6 text-center">New Student Registration</h2>
-                    <form id="registerForm" class="space-y-6">
-                        <div>
-                            <label for="fullName" class="block text-sm font-medium text-gray-400">Full Name</label>
-                            <input type="text" id="fullName" name="fullName" required class="mt-1 block w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                        </div>
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-400">Email Address</label>
-                            <input type="email" id="email" name="email" required class="mt-1 block w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                        </div>
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-gray-400">Password (min 6 chars)</label>
-                            <input type="password" id="password" name="password" required minlength="6" class="mt-1 block w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                        </div>
-                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 transition duration-150">Register & Sign Up</button>
-                    </form>
-                    <p class="mt-4 text-center text-sm text-gray-400">
-                        Already have an account? <a href="#" onclick="navigateTo('login')" class="font-medium text-cyan-400 hover:text-cyan-300">Sign in here</a>
-                    </p>
-                </div>
-            `;
-            document.getElementById('registerForm').addEventListener('submit', handleRegister);
-        }
+      document.getElementById('addVideoBtn').addEventListener('click', showAddVideoModal);
 
-        function renderDashboard() {
-            renderPageHeader('Student Dashboard');
-            appContent.innerHTML += `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Welcome Card -->
-                    <div class="bg-gray-800 p-6 rounded-xl shadow-lg col-span-1 md:col-span-3 border-l-4 border-cyan-400">
-                        <h3 class="text-2xl font-bold mb-2">Welcome Back, ${userData.fullName || 'Student'}!</h3>
-                        <p class="text-gray-400">You are securely logged into the tuition platform. Check out the latest resources below.</p>
-                    </div>
-
-                    <!-- Videos Card -->
-                    <div onclick="navigateTo('videos')" class="bg-gray-800 p-6 rounded-xl shadow-lg hover:bg-gray-700 transition duration-200 cursor-pointer content-card">
-                        <div class="flex items-center space-x-4">
-                            <svg class="w-10 h-10 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                            <div>
-                                <h3 class="text-xl font-semibold">Online Videos</h3>
-                                <p class="text-gray-400">Watch your daily lessons and past classes in real-time.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tutes Card -->
-                    <div onclick="navigateTo('tutes')" class="bg-gray-800 p-6 rounded-xl shadow-lg hover:bg-gray-700 transition duration-200 cursor-pointer content-card">
-                        <div class="flex items-center space-x-4">
-                            <svg class="w-10 h-10 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <div>
-                                <h3 class="text-xl font-semibold">Tuition Notes</h3>
-                                <p class="text-gray-400">Download the latest lesson notes (Tutes) and handouts.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Profile Card -->
-                    <div onclick="navigateTo('profile')" class="bg-gray-800 p-6 rounded-xl shadow-lg hover:bg-gray-700 transition duration-200 cursor-pointer content-card">
-                        <div class="flex items-center space-x-4">
-                            <svg class="w-10 h-10 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0112 0 4 4 01-4 4zm-7 0a4 4 0112 0 4 4 01-4 4zm-7 0a4 4 0112 0 4 4 01-4 4zm-7 0a4 4 0112 0 4 4 01-4 4zM4 16v-1a4 4 0014-4h2"></path></svg>
-                            <div>
-                                <h3 class="text-xl font-semibold">Profile Settings</h3>
-                                <p class="text-gray-400">Manage your name, email, and password securely.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderVideosPage() {
-            renderPageHeader('Daily Online Videos (Real-Time)');
-            appContent.innerHTML += `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="videoList">
-                    <p class="text-gray-400 col-span-3">Loading videos from database...</p>
-                </div>
-            `;
-            // Call the real-time data listener
-            listenForContent('videos');
-        }
-
-        function renderTutesPage() {
-            renderPageHeader('Tuition Notes & Handouts (Tutes)');
-            appContent.innerHTML += `
-                <div class="space-y-4" id="tutesList">
-                    <p class="text-gray-400">Loading tuition notes from database...</p>
-                </div>
-            `;
-            // Call the real-time data listener
-            listenForContent('tutes');
-        }
-        
-        // --- REAL-TIME CONTENT LISTENERS (Firestore) ---
-
-        let unsubscribeContent = null; // Store the listener function
-
-        /**
-         * Sets up a real-time listener for content (videos or tutes).
-         * @param {string} collectionName - 'videos' or 'tutes'.
-         */
-        function listenForContent(collectionName) {
-            // Unsubscribe from any previous listener before setting a new one
-            if (unsubscribeContent) {
-                unsubscribeContent();
-            }
-
-            const listElementId = collectionName === 'videos' ? 'videoList' : 'tutesList';
-            const listElement = document.getElementById(listElementId);
-            const contentCollectionRef = collection(db, `artifacts/${appId}/public/data/${collectionName}`);
-            
-            // Query: Get all documents, ordered by creation date (newest first)
-            const q = query(contentCollectionRef, orderBy('createdAt', 'desc'));
-
-            // Set up the real-time listener
-            unsubscribeContent = onSnapshot(q, (snapshot) => {
-                if (!listElement) return; // Guard
-                
-                let html = '';
-                if (snapshot.empty) {
-                    html = `<p class="text-gray-400 col-span-3">No ${collectionName} found yet. Check back soon!</p>`;
-                } else {
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        html += collectionName === 'videos' 
-                            ? createVideoCard(data, doc.id)
-                            : createTuteCard(data, doc.id);
-                    });
-                }
-                listElement.innerHTML = html;
-            }, (error) => {
-                console.error("Error fetching real-time content:", error);
-                listElement.innerHTML = `<p class="text-red-500 col-span-3">Error loading content: ${error.message}</p>`;
-            });
-        }
-
-        function createVideoCard(video, id) {
-            // Advanced: Using a placeholder image and a fixed 16:9 ratio
-            const placeholder = `https://placehold.co/400x225/2E3A59/FFFFFF?text=${video.title.substring(0, 15)}...`;
-            return `
-                <div id="video-${id}" class="bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-cyan-500/50 transition duration-300 cursor-pointer">
-                    <div class="relative pt-[56.25%]"> <!-- 16:9 Aspect Ratio -->
-                        <img src="${placeholder}" alt="${video.title}" class="absolute top-0 w-full h-full object-cover">
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-lg font-semibold text-white truncate">${video.title}</h3>
-                        <p class="text-sm text-gray-400">${video.subject || 'General'}</p>
-                        <a href="${video.url}" target="_blank" class="text-sm text-cyan-400 hover:text-cyan-300 mt-2 inline-block font-medium">Watch Now &rarr;</a>
-                    </div>
-                </div>
-            `;
-        }
-
-        function createTuteCard(tute, id) {
-            return `
-                <div id="tute-${id}" class="bg-gray-800 p-5 rounded-xl shadow-lg content-card flex justify-between items-center hover:bg-gray-700 transition duration-200">
-                    <div>
-                        <h3 class="text-lg font-semibold text-white">${tute.title}</h3>
-                        <p class="text-sm text-gray-400">${tute.subject || 'General'} | Uploaded: ${new Date(tute.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <a href="${tute.url}" target="_blank" class="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        <span>Download</span>
-                    </a>
-                </div>
-            `;
-        }
-
-        // --- PROFILE MANAGEMENT ---
-
-        function renderProfilePage() {
-            renderPageHeader('Profile & Security Settings');
-            appContent.innerHTML += `
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Profile Editor Form -->
-                    <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
-                        <h3 class="text-xl font-bold mb-4 text-cyan-400 border-b border-gray-700 pb-2">Edit User Profile</h3>
-                        <form id="profileEditForm" class="space-y-4">
-                            <div>
-                                <label for="profileName" class="block text-sm font-medium text-gray-400">Full Name</label>
-                                <input type="text" id="profileName" value="${auth.currentUser.displayName || userData.fullName || ''}" required class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-400">Email Address (Cannot change)</label>
-                                <input type="email" value="${auth.currentUser.email}" disabled class="mt-1 block w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-500 cursor-not-allowed">
-                            </div>
-                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 transition duration-150">Save Profile</button>
-                        </form>
-                    </div>
-
-                    <!-- Password Changer Form -->
-                    <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
-                        <h3 class="text-xl font-bold mb-4 text-cyan-400 border-b border-gray-700 pb-2">Change Password</h3>
-                        <form id="passwordChangeForm" class="space-y-4">
-                            <div>
-                                <label for="currentPassword" class="block text-sm font-medium text-gray-400">Current Password</label>
-                                <input type="password" id="currentPassword" required class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                            </div>
-                            <div>
-                                <label for="newPassword" class="block text-sm font-medium text-gray-400">New Password (min 6 chars)</label>
-                                <input type="password" id="newPassword" required minlength="6" class="mt-1 block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-cyan-500 focus:border-cyan-500">
-                            </div>
-                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">Change Password</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            document.getElementById('profileEditForm').addEventListener('submit', handleProfileUpdate);
-            document.getElementById('passwordChangeForm').addEventListener('submit', handleChangePassword);
-        }
-
-        // --- PROFILE/PASSWORD HANDLERS ---
-
-        async function handleProfileUpdate(e) {
-            e.preventDefault();
-            const newName = e.target.profileName.value;
-            const user = auth.currentUser;
-
-            if (newName === user.displayName && newName === userData.fullName) {
-                showAlert('No changes detected.', 'info');
-                return;
-            }
-
-            try {
-                // 1. Update Firebase Auth Profile
-                await updateProfile(user, { displayName: newName });
-                
-                // 2. Update Firestore document
-                const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/user_data`, 'profile');
-                await setDoc(userDocRef, { fullName: newName }, { merge: true });
-
-                showAlert('Profile updated successfully!', 'success');
-                // Force a reload of user data to update the sidebar immediately
-                auth.currentUser.reload();
-            } catch (error) {
-                showAlert(`Profile update failed: ${error.message}`, 'error');
-            }
-        }
-
-        async function handleChangePassword(e) {
-            e.preventDefault();
-            const currentPassword = e.target.currentPassword.value;
-            const newPassword = e.target.newPassword.value;
-            const user = auth.currentUser;
-
-            try {
-                // Step 1: Re-authenticate the user (MANDATORY for security-sensitive actions)
-                const credential = EmailAuthProvider.credential(user.email, currentPassword);
-                await reauthenticateWithCredential(user, credential);
-
-                // Step 2: Update the password
-                await updatePassword(user, newPassword);
-
-                showAlert('Password changed successfully!', 'success');
-                e.target.reset(); // Clear form fields
-            } catch (error) {
-                if (error.code === 'auth/wrong-password') {
-                    showAlert('Current password is incorrect.', 'error');
-                } else {
-                    showAlert(`Password change failed: ${error.message}`, 'error');
-                }
-            }
-        }
-        
-        // --- INITIAL AUTHENTICATION AND SETUP ---
-
-        /**
-         * Checks for initial Canvas token and signs in or signs in anonymously.
-         */
-        async function initializeAuth() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                    console.log("Signed in with initial custom token.");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("Signed in anonymously.");
-                }
-            } catch (error) {
-                console.error("Initial auth failed:", error);
-                // Fallback to anonymous sign-in if token fails
-                try {
-                    await signInAnonymously(auth);
-                } catch (e) {
-                    console.error("Anonymous sign-in failed:", e);
-                }
-            }
-        }
-        
-        // --- UI TOGGLES ---
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            sidebar.classList.toggle('hidden');
-            pageWrapper.classList.toggle('sidebar-open');
+      // load videos
+      const vRef = query(ref(db, 'videos'), orderByChild('createdAt'));
+      onValue(vRef, (snap)=>{
+        const grid = document.getElementById('videosGrid');
+        grid.innerHTML = '';
+        snap.forEach(s=>{
+          const d = s.val();
+          const card = document.createElement('div');
+          card.className = 'p-4 bg-gray-900/40 rounded';
+          card.innerHTML = `
+            <div class=\"h-40 bg-gradient-to-br from-gray-800 to-gray-900 rounded mb-3 flex items-center justify-center\">Video</div>
+            <div class=\"font-semibold\">${escapeHtml(d.title)}</div>
+            <div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div>
+            <a target=\"_blank\" class=\"text-cyan-400 text-sm mt-2 inline-block\" href=\"${escapeHtml(d.url)}\">Watch &rarr;</a>
+          `;
+          grid.prepend(card);
         });
+      });
+    }
 
-        // Start the authentication process
-        initializeAuth();
-        
-    </script>
+    function renderTutes(){
+      content.innerHTML = `
+        <div class="max-w-4xl mx-auto space-y-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-2xl font-bold accent">Tuition Notes (Tutes)</h2>
+            <button id="addTuteBtn" class="py-2 px-4 rounded bg-cyan-600">Add Tute</button>
+          </div>
+
+          <div id="tutesList" class="space-y-3"></div>
+        </div>
+      `;
+      document.getElementById('addTuteBtn').addEventListener('click', showAddTuteModal);
+
+      const tRef = query(ref(db, 'tutes'), orderByChild('createdAt'));
+      onValue(tRef, (snap)=>{
+        const list = document.getElementById('tutesList'); list.innerHTML = '';
+        snap.forEach(s => {
+          const d = s.val();
+          const row = document.createElement('div');
+          row.className = 'p-3 bg-gray-900/40 rounded flex justify-between items-center';
+          row.innerHTML = `<div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a href=\"${escapeHtml(d.url)}\" target=\"_blank\" class=\"py-2 px-3 bg-cyan-600 rounded\">Open</a>`;
+          list.prepend(row);
+        });
+      });
+    }
+
+    function renderProfile(){
+      const user = auth.currentUser;
+      content.innerHTML = `
+        <div class="max-w-2xl mx-auto grid grid-cols-1 gap-6">
+          <div class="p-6 glass rounded">
+            <h3 class="font-semibold accent mb-3">Edit Profile</h3>
+            <form id="profileForm" class="space-y-3">
+              <input name="displayName" value="${user?.displayName||''}" class="w-full p-3 rounded bg-gray-900/60" />
+              <div class="text-sm text-gray-400">Email: <strong>${user?.email||'n/a'}</strong></div>
+              <button class="py-2 px-4 rounded accent-bg text-black">Save</button>
+            </form>
+          </div>
+
+          <div class="p-6 glass rounded">
+            <h3 class="font-semibold accent mb-3">Change Password</h3>
+            <form id="passForm" class="space-y-3">
+              <input name="current" type="password" placeholder="Current password" class="w-full p-3 rounded bg-gray-900/60" required />
+              <input name="newpass" type="password" placeholder="New password (min 6)" class="w-full p-3 rounded bg-gray-900/60" required minlength="6" />
+              <button class="py-2 px-4 rounded bg-red-600">Change password</button>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('profileForm').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const name = ev.target.displayName.value.trim();
+        try{
+          await updateProfile(auth.currentUser, { displayName: name });
+          // write small profile node in DB for convenience
+          await set(ref(db, `profiles/${auth.currentUser.uid}`), { displayName: name, email: auth.currentUser.email });
+          toast('Profile saved');
+        }catch(err){ toast('Profile save error: '+err.message); }
+      });
+
+      document.getElementById('passForm').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const cur = ev.target.current.value;
+        const nw = ev.target.newpass.value;
+        try{
+          const cred = EmailAuthProvider.credential(auth.currentUser.email, cur);
+          await reauthenticateWithCredential(auth.currentUser, cred);
+          await updatePassword(auth.currentUser, nw);
+          toast('Password changed');
+          ev.target.reset();
+        }catch(err){ toast('Password change error: '+err.message); }
+      });
+    }
+
+    // ----------------------------
+    // Small helper: escape HTML
+    // ----------------------------
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>\"]/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    // ----------------------------
+    // Modals to add content
+    // ----------------------------
+    function showAddVideoModal(){
+      const modal = el(`
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/60" onclick="this.parentNode.remove()"></div>
+          <div class="relative bg-black/90 p-6 rounded w-full max-w-md glass">
+            <h3 class="font-semibold mb-3">Add Video</h3>
+            <form id="videoForm" class="space-y-3">
+              <input name="title" required placeholder="Title" class="w-full p-3 rounded bg-gray-900/60" />
+              <input name="subject" placeholder="Subject" class="w-full p-3 rounded bg-gray-900/60" />
+              <input name="url" required placeholder="Video URL (youtube/vimeo/... or file link)" class="w-full p-3 rounded bg-gray-900/60" />
+              <div class="flex gap-2 justify-end">
+                <button type="button" id="cancelVideo" class="py-2 px-3 rounded">Cancel</button>
+                <button class="py-2 px-3 rounded bg-cyan-600">Add</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `);
+      document.body.appendChild(modal);
+      modal.querySelector('#cancelVideo').addEventListener('click', ()=> modal.remove());
+      modal.querySelector('#videoForm').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const t = ev.target.title.value.trim();
+        const s = ev.target.subject.value.trim();
+        const u = ev.target.url.value.trim();
+        try{
+          await addVideo({ title: t, subject: s, url: u, createdAt: Date.now(), uploader: auth.currentUser?.uid || 'anon' });
+          toast('Video added');
+          modal.remove();
+        }catch(err){ toast('Add video failed: '+err.message); }
+      });
+    }
+
+    function showAddTuteModal(){
+      const modal = el(`
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/60" onclick="this.parentNode.remove()"></div>
+          <div class="relative bg-black/90 p-6 rounded w-full max-w-md glass">
+            <h3 class="font-semibold mb-3">Add Tute</h3>
+            <form id="tuteForm" class="space-y-3">
+              <input name="title" required placeholder="Title" class="w-full p-3 rounded bg-gray-900/60" />
+              <input name="subject" placeholder="Subject" class="w-full p-3 rounded bg-gray-900/60" />
+              <input name="url" required placeholder="File URL (drive/dropbox/... )" class="w-full p-3 rounded bg-gray-900/60" />
+              <div class="flex gap-2 justify-end">
+                <button type="button" id="cancelTute" class="py-2 px-3 rounded">Cancel</button>
+                <button class="py-2 px-3 rounded bg-cyan-600">Add</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `);
+      document.body.appendChild(modal);
+      modal.querySelector('#cancelTute').addEventListener('click', ()=> modal.remove());
+      modal.querySelector('#tuteForm').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const t = ev.target.title.value.trim();
+        const s = ev.target.subject.value.trim();
+        const u = ev.target.url.value.trim();
+        try{
+          await addTute({ title: t, subject: s, url: u, createdAt: Date.now(), uploader: auth.currentUser?.uid || 'anon' });
+          toast('Tute added');
+          modal.remove();
+        }catch(err){ toast('Add tute failed: '+err.message); }
+      });
+    }
+
+    // ----------------------------
+    // Main render function
+    // ----------------------------
+    function render(){
+      // Update auth area
+      const user = auth.currentUser;
+      if(user){
+        authArea.innerHTML = `
+          <div class=\"text-sm text-gray-300 mr-4\">${escapeHtml(user.email||'')}</div>
+          <button id=\"btnSignOut\" class=\"py-2 px-3 rounded bg-red-600\">Sign out</button>
+        `;
+        document.getElementById('btnSignOut').addEventListener('click', handleSignOut);
+        sideName.textContent = user.displayName || 'Student';
+        sideEmail.textContent = user.email || '';
+      }else{
+        authArea.innerHTML = `
+          <button id=\"btnToLogin\" class=\"py-2 px-3 rounded bg-cyan-600\">Login</button>
+          <button id=\"btnToRegister\" class=\"py-2 px-3 rounded border border-gray-700\">Register</button>
+        `;
+        document.getElementById('btnToLogin').addEventListener('click', ()=> navigate('login'));
+        document.getElementById('btnToRegister').addEventListener('click', ()=> navigate('register'));
+        sideName.textContent = 'Guest'; sideEmail.textContent = 'Not signed in';
+      }
+
+      // highlight nav buttons
+      document.querySelectorAll('.nav-btn').forEach(b=> b.classList.remove('bg-gray-800'));
+      const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b=> b.dataset.page===currentPage);
+      if(activeBtn) activeBtn.classList.add('bg-gray-800');
+
+      // render page
+      if(currentPage === 'login') renderLogin();
+      else if(currentPage === 'register') renderRegister();
+      else if(currentPage === 'dashboard') renderDashboard();
+      else if(currentPage === 'videos') renderVideos();
+      else if(currentPage === 'tutes') renderTutes();
+      else if(currentPage === 'profile') renderProfile();
+      else renderLogin();
+    }
+
+    // nav buttons in sidebar
+    document.querySelectorAll('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ navigate(b.dataset.page); }));
+
+    // ----------------------------
+    // Auth state listener
+    // ----------------------------
+    onAuthStateChanged(auth, (user)=>{
+      if(user){
+        // default landing page
+        if(currentPage === 'login' || currentPage === 'register') currentPage = 'dashboard';
+      } else {
+        currentPage = 'login';
+      }
+      render();
+    });
+
+    // initial render
+    render();
+
+    // ----------------------------
+    // Notes & next steps for you:
+    //  - Replace firebaseConfig fields (apiKey, authDomain, etc.) with your project's values.
+    //  - If you want file uploads (for tutes/videos) use Firebase Storage and generate share URLs.
+    //  - For production, enforce security rules in Realtime Database so only authorized users can write.
+    // ----------------------------
+  </script>
 </body>
 </html>
