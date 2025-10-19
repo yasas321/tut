@@ -3,32 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Vidya — Tuition Platform</title>
-  <!-- Tailwind CDN for quick styling -->
+  <title>Vidya — Tuition Platform (Admin + Uploads)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Small custom tweaks on top of Tailwind for a modern black theme */
-    :root{
-      --accent: #06b6d4; /* cyan */
-      --bg: #0b0b0d;
-      --panel: #111214;
-      --muted: #9ca3af;
-    }
+    :root{ --accent: #06b6d4; --bg: #0b0b0d; --panel: #111214; --muted: #9ca3af; }
     body{background:linear-gradient(180deg,#070707 0%, #0d0d0f 100%); color: #e6eef0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
     .glass{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.03)}
-    .accent{color:var(--accent)}
-    .accent-bg{background:linear-gradient(90deg,#075985,#06b6d4)}
-    .truncate-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    a{color:var(--accent)}
-    /* scrollbar */
-    ::-webkit-scrollbar{width:10px}
-    ::-webkit-scrollbar-thumb{background:#1f2937;border-radius:6px}
+    .accent{color:var(--accent)} .accent-bg{background:linear-gradient(90deg,#075985,#06b6d4)} .truncate-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    a{color:var(--accent)} ::-webkit-scrollbar{width:10px} ::-webkit-scrollbar-thumb{background:#1f2937;border-radius:6px}
   </style>
 </head>
 <body class="min-h-screen">
-  <!-- App wrapper -->
   <div id="app" class="flex">
-    <!-- SIDEBAR -->
     <aside id="sidebar" class="w-72 min-h-screen p-4 glass hidden lg:block">
       <div class="flex items-center gap-3 mb-6">
         <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-700 to-cyan-400 flex items-center justify-center font-bold">V</div>
@@ -50,477 +36,324 @@
       </div>
     </aside>
 
-    <!-- MAIN -->
     <div class="flex-1">
-      <!-- HEADER -->
       <header class="flex items-center justify-between p-4 glass">
         <div class="flex items-center gap-3">
           <button id="mobileMenu" class="lg:hidden p-2 rounded-md glass">☰</button>
           <h1 class="text-xl font-bold accent">Vidya — Tuition Platform</h1>
         </div>
-        <div id="authArea" class="flex items-center gap-3">
-          <!-- Filled dynamically -->
-        </div>
+        <div id="authArea" class="flex items-center gap-3"></div>
       </header>
 
-      <!-- CONTENT -->
-      <main id="content" class="p-6 lg:p-10">
-        <!-- Content injected by JS -->
-      </main>
+      <main id="content" class="p-6 lg:p-10"></main>
     </div>
   </div>
 
-  <!-- Toasts -->
   <div id="toastContainer" class="fixed top-6 right-6 space-y-2 z-50"></div>
 
-  <!-- FIREBASE + APP LOGIC -->
   <script type="module">
-    // ----------------------------
-    // Replace the values below with your Firebase project's config.
-    // You provided a Realtime DB URL; I've put it into databaseURL already.
-    // You must still fill apiKey, authDomain, projectId, etc. to enable Auth.
-    // ----------------------------
-
     import { initializeApp, setLogLevel } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
     import { getDatabase, ref, push, set, onValue, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js';
+    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js';
 
     setLogLevel('debug');
 
-    // --- Firebase config ---
-const firebaseConfig = {
-  apiKey: "AIzaSyD5Fq6P-EXAMPLE-EXAMPLE",
-  authDomain: "minibotproject2.firebaseapp.com",
-  projectId: "minibotproject2",
-  storageBucket: "minibotproject2.appspot.com",
-  messagingSenderId: "621136755943",
-  appId: "1:1029384756:web:abc123def456",
-  databaseURL: "https://minibotproject2-default-rtdb.asia-southeast1.firebasedatabase.app"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5Fq6P-EXAMPLE-EXAMPLE",
+      authDomain: "minibotproject2.firebaseapp.com",
+      projectId: "minibotproject2",
+      storageBucket: "minibotproject2.appspot.com",
+      messagingSenderId: "621136755943",
+      appId: "1:1029384756:web:abc123def456",
+      databaseURL: "https://minibotproject2-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
+    const storage = getStorage(app);
 
-    // ----------------------------
-    // Small UI utilities
-    // ----------------------------
+    const adminEmails = [ 'admin@example.com' ];
+
     function toast(msg, type='info'){
-      const c = document.createElement('div');
-      c.className = 'px-4 py-2 rounded-md shadow-md glass';
-      c.textContent = msg;
-      document.getElementById('toastContainer').appendChild(c);
-      setTimeout(()=>{ c.remove(); }, 4000);
+      const c = document.createElement('div'); c.className = 'px-4 py-2 rounded-md shadow-md glass'; c.textContent = msg; document.getElementById('toastContainer').appendChild(c);
+      setTimeout(()=> c.remove(), 4000);
     }
-
     function el(html){ const wrap = document.createElement('div'); wrap.innerHTML = html.trim(); return wrap.firstChild; }
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/"/g,'&quot;'); }
 
-    // ----------------------------
-    // Simple client-side router
-    // ----------------------------
-    let currentPage = 'login';
-    function navigate(page){ currentPage = page; render(); window.scrollTo(0,0); }
+    function readLocal(key){ try{ return JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ return null; } }
+    function writeLocal(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
 
-    // ----------------------------
-    // DOM refs
-    // ----------------------------
-    const content = document.getElementById('content');
-    const authArea = document.getElementById('authArea');
-    const sideName = document.getElementById('sideName');
-    const sideEmail = document.getElementById('sideEmail');
-    const sidebar = document.getElementById('sidebar');
+    async function sha256hex(str){ const enc = new TextEncoder(); const buf = await crypto.subtle.digest('SHA-256', enc.encode(str)); const b = Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,'0')).join(''); return b; }
 
-    // Mobile menu
-    document.getElementById('mobileMenu').addEventListener('click', ()=> sidebar.classList.toggle('hidden'));
+    function addLog(entry){ const logs = readLocal('vidya_logs')||[]; logs.push({ ts: (new Date()).toISOString(), ...entry }); writeLocal('vidya_logs', logs); }
+    function getLogs(){ return readLocal('vidya_logs')||[]; }
 
-    // ----------------------------
-    // Auth actions
-    // ----------------------------
-    async function handleRegister(e){
-      e.preventDefault();
-      const email = e.target.email.value.trim();
-      const pass = e.target.password.value;
-      const fullName = e.target.name.value.trim();
+    async function saveLocalUser(email, password){ const users = readLocal('vidya_users')||{}; users[email] = { hash: await sha256hex(password), createdAt: (new Date()).toISOString() }; writeLocal('vidya_users', users); }
+    async function verifyLocalUser(email, password){ const users = readLocal('vidya_users')||{}; if(!users[email]) return false; const h = await sha256hex(password); return h === users[email].hash; }
+
+    function downloadLogsFile(){ const data = getLogs(); const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'vidya_logs.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+
+    async function handleRegister(e){ e.preventDefault(); const email = e.target.email.value.trim(); const pass = e.target.password.value; const fullName = e.target.name.value.trim();
       try{
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         await updateProfile(cred.user, { displayName: fullName });
-        toast('Registration successful');
-      }catch(err){ toast('Register error: ' + err.message); }
+        toast('Registration successful (Firebase)'); addLog({ action: 'register', email, method: 'firebase', success: true });
+      }catch(err){
+        console.warn('Firebase register error:', err);
+        await saveLocalUser(email, pass);
+        addLog({ action: 'register', email, method: 'local', success: false, error: err.message });
+        toast('Firebase register failed; saved locally as fallback. See admin logs.');
+      }
     }
 
-    async function handleLogin(e){
-      e.preventDefault();
-      const email = e.target.email.value.trim();
-      const pass = e.target.password.value;
+    async function handleLogin(e){ e.preventDefault(); const email = e.target.email.value.trim(); const pass = e.target.password.value;
       try{
         await signInWithEmailAndPassword(auth, email, pass);
-        toast('Login successful');
-      }catch(err){ toast('Login error: ' + err.message); }
+        toast('Login successful (Firebase)'); addLog({ action: 'login', email, method: 'firebase', success: true });
+      }catch(err){
+        console.warn('Firebase login error:', err);
+        const ok = await verifyLocalUser(email, pass);
+        if(ok){ toast('Logged in using local fallback'); addLog({ action: 'login', email, method: 'local', success: true });
+          localStorage.setItem('vidya_session', JSON.stringify({ email, displayName: email.split('@')[0], ts: new Date().toISOString() })); render();
+        } else {
+          addLog({ action: 'login', email, method: 'firebase', success: false, error: err.message });
+          toast('Login failed (Firebase) and no local account exists.');
+        }
+      }
     }
 
-    async function handleSignOut(){
-      try{ await signOut(auth); toast('Signed out'); }catch(err){ toast('Sign out failed: '+err.message); }
+    async function handleSignOut(){ try{ localStorage.removeItem('vidya_session'); await signOut(auth); toast('Signed out'); addLog({ action: 'signout', email: auth.currentUser?.email || 'unknown', method: 'firebase' });
+      }catch(err){ localStorage.removeItem('vidya_session'); toast('Signed out locally'); addLog({ action: 'signout', email: 'unknown', method: 'local' }); }
+      render();
     }
 
-    // ----------------------------
-    // Realtime DB: add video / tute
-    // ----------------------------
-    async function addVideo(data){
-      const node = ref(db, 'videos');
-      const newRef = push(node);
-      await set(newRef, data);
-    }
-    async function addTute(data){
-      const node = ref(db, 'tutes');
-      const newRef = push(node);
-      await set(newRef, data);
-    }
+    async function addVideoToDB(meta){ const node = ref(db, 'videos'); const newRef = push(node); await set(newRef, meta); }
+    async function addTuteToDB(meta){ const node = ref(db, 'tutes'); const newRef = push(node); await set(newRef, meta); }
 
-    // ----------------------------
-    // Renderers for each page
-    // ----------------------------
-    function renderLogin(){
-      content.innerHTML = `
-        <div class="max-w-xl mx-auto bg-black/40 p-6 rounded-lg glass">
-          <h2 class="text-2xl font-bold accent mb-4">Sign in to Vidya</h2>
-          <form id="formLogin" class="space-y-3">
-            <input name="email" required type="email" placeholder="Email" class="w-full p-3 rounded bg-gray-900/60" />
-            <input name="password" required type="password" placeholder="Password" class="w-full p-3 rounded bg-gray-900/60" />
-            <button class="w-full py-3 rounded accent-bg text-black font-semibold">Sign in</button>
-          </form>
-          <div class="mt-4 text-sm text-gray-400">No account? <a href="#" id="toReg">Register</a></div>
-        </div>
-      `;
+    async function uploadFileAndGetURL(file, pathPrefix){ const sRef = storageRef(storage, `${pathPrefix}/${Date.now()}_${file.name}`); const task = uploadBytesResumable(sRef, file);
+      return new Promise((res, rej)=>{ task.on('state_changed', ()=>{}, (err)=> rej(err), async ()=>{ const url = await getDownloadURL(task.snapshot.ref); res(url); }); }); }
+
+    let currentPage = 'login'; function navigate(page){ currentPage = page; render(); window.scrollTo(0,0); }
+
+    const content = document.getElementById('content'); const authArea = document.getElementById('authArea'); const sideName = document.getElementById('sideName'); const sideEmail = document.getElementById('sideEmail'); const sidebar = document.getElementById('sidebar');
+    document.getElementById('mobileMenu').addEventListener('click', ()=> sidebar.classList.toggle('hidden'));
+
+    function renderLogin(){ content.innerHTML = `
+      <div class="max-w-xl mx-auto bg-black/40 p-6 rounded-lg glass">
+        <h2 class="text-2xl font-bold accent mb-4">Sign in to Vidya</h2>
+        <form id="formLogin" class="space-y-3">
+          <input name="email" required type="email" placeholder="Email" class="w-full p-3 rounded bg-gray-900/60" />
+          <input name="password" required type="password" placeholder="Password" class="w-full p-3 rounded bg-gray-900/60" />
+          <button class="w-full py-3 rounded accent-bg text-black font-semibold">Sign in</button>
+        </form>
+        <div class="mt-4 text-sm text-gray-400">No account? <a href="#" id="toReg">Register</a></div>
+        <div class="mt-2 text-sm text-gray-400">Tip: If Firebase is down, the app will fallback to a local account (if previously created here).</div>
+      </div>
+    `;
       document.getElementById('formLogin').addEventListener('submit', handleLogin);
       document.getElementById('toReg').addEventListener('click', (ev)=>{ ev.preventDefault(); navigate('register'); });
     }
 
-    function renderRegister(){
-      content.innerHTML = `
-        <div class="max-w-xl mx-auto bg-black/40 p-6 rounded-lg glass">
-          <h2 class="text-2xl font-bold accent mb-4">Create an account</h2>
-          <form id="formReg" class="space-y-3">
-            <input name="name" required placeholder="Full name" class="w-full p-3 rounded bg-gray-900/60" />
-            <input name="email" required type="email" placeholder="Email" class="w-full p-3 rounded bg-gray-900/60" />
-            <input name="password" required type="password" minlength="6" placeholder="Password" class="w-full p-3 rounded bg-gray-900/60" />
-            <button class="w-full py-3 rounded accent-bg text-black font-semibold">Create account</button>
-          </form>
-          <div class="mt-4 text-sm text-gray-400">Already have an account? <a href="#" id="toLogin">Sign in</a></div>
-        </div>
-      `;
+    function renderRegister(){ content.innerHTML = `
+      <div class="max-w-xl mx-auto bg-black/40 p-6 rounded-lg glass">
+        <h2 class="text-2xl font-bold accent mb-4">Create an account</h2>
+        <form id="formReg" class="space-y-3">
+          <input name="name" required placeholder="Full name" class="w-full p-3 rounded bg-gray-900/60" />
+          <input name="email" required type="email" placeholder="Email" class="w-full p-3 rounded bg-gray-900/60" />
+          <input name="password" required type="password" minlength="6" placeholder="Password" class="w-full p-3 rounded bg-gray-900/60" />
+          <button class="w-full py-3 rounded accent-bg text-black font-semibold">Create account</button>
+        </form>
+        <div class="mt-4 text-sm text-gray-400">Already have an account? <a href="#" id="toLogin">Sign in</a></div>
+      </div>
+    `;
       document.getElementById('formReg').addEventListener('submit', handleRegister);
       document.getElementById('toLogin').addEventListener('click', (ev)=>{ ev.preventDefault(); navigate('login'); });
     }
 
-    function renderDashboard(){
-      content.innerHTML = `
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 bg-black/40 p-6 rounded glass">
-            <h2 class="text-2xl font-bold accent mb-3">Welcome back, <span id="dashName">User</span></h2>
-            <p class="text-gray-400 mb-6">This dashboard gives quick access to videos and tutes.
-            Use the buttons below to add new content (you must be authenticated).</p>
+    function isAdminUser(){ const user = auth.currentUser; if(user && adminEmails.includes(user.email)) return true; const s = readLocal('vidya_session'); if(s && adminEmails.includes(s.email)) return true; return false; }
 
-            <div class="flex gap-3">
-              <button id="btnNewVideo" class="py-2 px-4 rounded bg-cyan-600 hover:bg-cyan-700">Add Video</button>
-              <button id="btnNewTute" class="py-2 px-4 rounded bg-cyan-600 hover:bg-cyan-700">Add Tute</button>
-            </div>
+    function renderDashboard(){ const isAdmin = isAdminUser(); content.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-black/40 p-6 rounded glass">
+          <h2 class="text-2xl font-bold accent mb-3">Welcome back, <span id="dashName">User</span></h2>
+          <p class="text-gray-400 mb-6">This dashboard gives quick access to videos and tutes.
+            ${isAdmin ? 'As an admin you can add content and view logs.' : ''}
+          </p>
 
-            <section class="mt-6">
-              <h3 class="font-semibold mb-2">Latest Videos</h3>
-              <div id="dashVideos" class="space-y-3"></div>
-            </section>
-
-            <section class="mt-6">
-              <h3 class="font-semibold mb-2">Latest Tutes</h3>
-              <div id="dashTutes" class="space-y-3"></div>
-            </section>
+          <div class="flex gap-3">
+            ${isAdmin ? '<button id="btnNewVideo" class="py-2 px-4 rounded bg-cyan-600 hover:bg-cyan-700">Add Video</button><button id="btnNewTute" class="py-2 px-4 rounded bg-cyan-600 hover:bg-cyan-700">Add Tute</button>' : ''}
           </div>
 
-          <aside class="bg-black/40 p-6 rounded glass">
-            <h3 class="font-semibold mb-3">Quick Profile</h3>
-            <div id="miniProfile" class="text-sm text-gray-300">Loading...</div>
-          </aside>
+          <section class="mt-6">
+            <h3 class="font-semibold mb-2">Latest Videos</h3>
+            <div id="dashVideos" class="space-y-3"></div>
+          </section>
+
+          <section class="mt-6">
+            <h3 class="font-semibold mb-2">Latest Tutes</h3>
+            <div id="dashTutes" class="space-y-3"></div>
+          </section>
         </div>
-      `;
 
-      document.getElementById('btnNewVideo').addEventListener('click', ()=> showAddVideoModal());
-      document.getElementById('btnNewTute').addEventListener('click', ()=> showAddTuteModal());
+        <aside class="bg-black/40 p-6 rounded glass">
+          <h3 class="font-semibold mb-3">Quick Profile</h3>
+          <div id="miniProfile" class="text-sm text-gray-300">Loading...</div>
+          ${isAdmin ? '<hr class="my-4" /><h3 class="font-semibold mb-3">Admin Logs</h3><div id="adminLogs" class="text-sm text-gray-300 max-h-48 overflow-auto"></div><div class="mt-3"><button id="downloadLogs" class="py-2 px-3 rounded bg-green-600">Download Logs</button></div>' : ''}
+        </aside>
+      </div>
+    `;
 
-      // Populate latest lists from DB
+      if(isAdmin){ document.getElementById('btnNewVideo').addEventListener('click', ()=> showAddVideoModal()); document.getElementById('btnNewTute').addEventListener('click', ()=> showAddTuteModal()); document.getElementById('downloadLogs').addEventListener('click', downloadLogsFile); }
+
       const vq = query(ref(db, 'videos'), orderByChild('createdAt'), limitToLast(6));
-      onValue(vq, (snap)=>{
-        const out = document.getElementById('dashVideos');
-        out.innerHTML = '';
-        snap.forEach(s => {
-          const d = s.val();
-          const item = document.createElement('div');
-          item.className = 'p-3 bg-gray-900/40 rounded';
-          item.innerHTML = `<div class=\"flex justify-between items-start\"><div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a class=\"text-sm text-cyan-400\" href=\"${escapeHtml(d.url)}\" target=\"_blank\">Watch</a></div>`;
+      onValue(vq, (snap)=>{ const out = document.getElementById('dashVideos'); out.innerHTML = ''; snap.forEach(s => { const d = s.val(); const item = document.createElement('div'); item.className = 'p-3 bg-gray-900/40 rounded';
+          let watch = d.storageUrl ? `<a class="text-sm text-cyan-400" href="${escapeHtml(d.storageUrl)}" target="_blank">Watch</a>` : `<a class="text-sm text-cyan-400" href="${escapeHtml(d.url)}" target="_blank">Watch</a>`;
+          if(d.storageUrl && d.mime && d.mime.startsWith('video')) watch = `<a class="text-sm text-cyan-400" href="#" onclick="(function(){ const v=document.createElement('video'); v.controls=true; v.src='${escapeHtml(d.storageUrl)}'; v.className='w-full mt-3 rounded'; const c=document.getElementById('content'); c.prepend(v); })()">Play</a>`;
+          item.innerHTML = `<div class=\"flex justify-between items-start\"><div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div>${watch}</div>`;
           out.prepend(item);
-        });
-      });
+        }); });
 
       const tq = query(ref(db, 'tutes'), orderByChild('createdAt'), limitToLast(6));
-      onValue(tq, (snap)=>{
-        const out = document.getElementById('dashTutes');
-        out.innerHTML = '';
-        snap.forEach(s => {
-          const d = s.val();
-          const item = document.createElement('div');
-          item.className = 'p-3 bg-gray-900/40 rounded flex justify-between items-center';
-          item.innerHTML = `<div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a class=\"text-sm text-cyan-400\" href=\"${escapeHtml(d.url)}\" target=\"_blank\">Open</a>`;
-          out.prepend(item);
-        });
-      });
+      onValue(tq, (snap)=>{ const out = document.getElementById('dashTutes'); out.innerHTML = ''; snap.forEach(s => { const d = s.val(); const item = document.createElement('div'); item.className = 'p-3 bg-gray-900/40 rounded flex justify-between items-center'; const link = d.storageUrl ? `<a class="text-sm text-cyan-400" href="${escapeHtml(d.storageUrl)}" download>Download</a>` : `<a class="text-sm text-cyan-400" href="${escapeHtml(d.url)}" target="_blank">Open</a>`; item.innerHTML = `<div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div>${link}`; out.prepend(item); }); });
+
+      const user = auth.currentUser; const localSession = readLocal('vidya_session'); const nameEl = document.getElementById('dashName'); nameEl.textContent = user?.displayName || localSession?.displayName || (user?.email || localSession?.email || 'User');
+      const mini = document.getElementById('miniProfile'); mini.innerHTML = `<div>Name: <strong>${escapeHtml(user?.displayName || localSession?.displayName || '')}</strong></div><div class='text-sm text-gray-400'>Email: ${escapeHtml(user?.email || localSession?.email || 'n/a')}</div>`;
+
+      if(isAdmin){ const logs = getLogs().slice().reverse(); const out = document.getElementById('adminLogs'); out.innerHTML = logs.map(l=>`<div class=\"p-2 border-b border-gray-800\"><div class=\"text-xs text-gray-400\">${escapeHtml(l.ts)}</div><div><strong>${escapeHtml(l.action)}</strong> — ${escapeHtml(l.email||'')} ${l.error?'<div class=\"text-xs text-red-500\">'+escapeHtml(l.error)+'</div>':''}</div></div>`).join(''); }
     }
 
-    function renderVideos(){
-      content.innerHTML = `
-        <div class="max-w-4xl mx-auto space-y-4">
-          <div class="flex justify-between items-center">
-            <h2 class="text-2xl font-bold accent">Online Videos</h2>
-            <button id="addVideoBtn" class="py-2 px-4 rounded bg-cyan-600">Add Video</button>
-          </div>
-
-          <div id="videosGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    function renderVideos(){ content.innerHTML = `
+      <div class="max-w-4xl mx-auto space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-2xl font-bold accent">Online Videos</h2>
+          ${isAdminUser()?'<button id="addVideoBtn" class="py-2 px-4 rounded bg-cyan-600">Add Video</button>':''}
         </div>
-      `;
 
-      document.getElementById('addVideoBtn').addEventListener('click', showAddVideoModal);
+        <div id="videosGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+    `;
+      if(isAdminUser()) document.getElementById('addVideoBtn').addEventListener('click', showAddVideoModal);
 
-      // load videos
       const vRef = query(ref(db, 'videos'), orderByChild('createdAt'));
-      onValue(vRef, (snap)=>{
-        const grid = document.getElementById('videosGrid');
-        grid.innerHTML = '';
-        snap.forEach(s=>{
-          const d = s.val();
-          const card = document.createElement('div');
-          card.className = 'p-4 bg-gray-900/40 rounded';
-          card.innerHTML = `
-            <div class=\"h-40 bg-gradient-to-br from-gray-800 to-gray-900 rounded mb-3 flex items-center justify-center\">Video</div>
-            <div class=\"font-semibold\">${escapeHtml(d.title)}</div>
-            <div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div>
-            <a target=\"_blank\" class=\"text-cyan-400 text-sm mt-2 inline-block\" href=\"${escapeHtml(d.url)}\">Watch &rarr;</a>
-          `;
+      onValue(vRef, (snap)=>{ const grid = document.getElementById('videosGrid'); grid.innerHTML = ''; snap.forEach(s=>{ const d = s.val(); const card = document.createElement('div'); card.className = 'p-4 bg-gray-900/40 rounded';
+          let contentHtml = `<div class=\"h-40 bg-gradient-to-br from-gray-800 to-gray-900 rounded mb-3 flex items-center justify-center\">Video</div>`;
+          if(d.storageUrl && d.mime && d.mime.startsWith('video')) contentHtml = `<video controls class=\"w-full h-40 object-cover rounded mb-3\"><source src=\"${escapeHtml(d.storageUrl)}\" type=\"${escapeHtml(d.mime)}\"/></video>`;
+          card.innerHTML = contentHtml + `<div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div><a target=\"_blank\" class=\"text-cyan-400 text-sm mt-2 inline-block\" href=\"${escapeHtml(d.storageUrl||d.url)}\">Watch &rarr;</a>`;
           grid.prepend(card);
-        });
-      });
+        }); });
     }
 
-    function renderTutes(){
-      content.innerHTML = `
-        <div class="max-w-4xl mx-auto space-y-4">
-          <div class="flex justify-between items-center">
-            <h2 class="text-2xl font-bold accent">Tuition Notes (Tutes)</h2>
-            <button id="addTuteBtn" class="py-2 px-4 rounded bg-cyan-600">Add Tute</button>
-          </div>
-
-          <div id="tutesList" class="space-y-3"></div>
+    function renderTutes(){ content.innerHTML = `
+      <div class="max-w-4xl mx-auto space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-2xl font-bold accent">Tuition Notes (Tutes)</h2>
+          ${isAdminUser()?'<button id="addTuteBtn" class="py-2 px-4 rounded bg-cyan-600">Add Tute</button>':''}
         </div>
-      `;
-      document.getElementById('addTuteBtn').addEventListener('click', showAddTuteModal);
+
+        <div id="tutesList" class="space-y-3"></div>
+      </div>
+    `;
+      if(isAdminUser()) document.getElementById('addTuteBtn').addEventListener('click', showAddTuteModal);
 
       const tRef = query(ref(db, 'tutes'), orderByChild('createdAt'));
-      onValue(tRef, (snap)=>{
-        const list = document.getElementById('tutesList'); list.innerHTML = '';
-        snap.forEach(s => {
-          const d = s.val();
-          const row = document.createElement('div');
-          row.className = 'p-3 bg-gray-900/40 rounded flex justify-between items-center';
-          row.innerHTML = `<div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a href=\"${escapeHtml(d.url)}\" target=\"_blank\" class=\"py-2 px-3 bg-cyan-600 rounded\">Open</a>`;
-          list.prepend(row);
-        });
-      });
+      onValue(tRef, (snap)=>{ const list = document.getElementById('tutesList'); list.innerHTML = ''; snap.forEach(s => { const d = s.val(); const row = document.createElement('div'); row.className = 'p-3 bg-gray-900/40 rounded flex justify-between items-center'; row.innerHTML = `<div><div class=\"font-semibold\">${escapeHtml(d.title)}</div><div class=\"text-sm text-gray-400\">${escapeHtml(d.subject || 'General')}</div></div><a href=\"${escapeHtml(d.storageUrl||d.url)}\" target=\"_blank\" class=\"py-2 px-3 bg-cyan-600 rounded\" ${d.storageUrl?'download':''}>${d.storageUrl?'Download':'Open'}</a>`; list.prepend(row); }); });
     }
 
-    function renderProfile(){
-      const user = auth.currentUser;
-      content.innerHTML = `
-        <div class="max-w-2xl mx-auto grid grid-cols-1 gap-6">
-          <div class="p-6 glass rounded">
-            <h3 class="font-semibold accent mb-3">Edit Profile</h3>
-            <form id="profileForm" class="space-y-3">
-              <input name="displayName" value="${user?.displayName||''}" class="w-full p-3 rounded bg-gray-900/60" />
-              <div class="text-sm text-gray-400">Email: <strong>${user?.email||'n/a'}</strong></div>
-              <button class="py-2 px-4 rounded accent-bg text-black">Save</button>
-            </form>
-          </div>
-
-          <div class="p-6 glass rounded">
-            <h3 class="font-semibold accent mb-3">Change Password</h3>
-            <form id="passForm" class="space-y-3">
-              <input name="current" type="password" placeholder="Current password" class="w-full p-3 rounded bg-gray-900/60" required />
-              <input name="newpass" type="password" placeholder="New password (min 6)" class="w-full p-3 rounded bg-gray-900/60" required minlength="6" />
-              <button class="py-2 px-4 rounded bg-red-600">Change password</button>
-            </form>
-          </div>
+    function renderProfile(){ const user = auth.currentUser; const localSession = readLocal('vidya_session'); content.innerHTML = `
+      <div class="max-w-2xl mx-auto grid grid-cols-1 gap-6">
+        <div class="p-6 glass rounded">
+          <h3 class="font-semibold accent mb-3">Edit Profile</h3>
+          <form id="profileForm" class="space-y-3">
+            <input name="displayName" value="${escapeHtml(user?.displayName||localSession?.displayName||'')}" class="w-full p-3 rounded bg-gray-900/60" />
+            <div class="text-sm text-gray-400">Email: <strong>${escapeHtml(user?.email||localSession?.email||'n/a')}</strong></div>
+            <button class="py-2 px-4 rounded accent-bg text-black">Save</button>
+          </form>
         </div>
-      `;
 
-      document.getElementById('profileForm').addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const name = ev.target.displayName.value.trim();
-        try{
-          await updateProfile(auth.currentUser, { displayName: name });
-          // write small profile node in DB for convenience
-          await set(ref(db, `profiles/${auth.currentUser.uid}`), { displayName: name, email: auth.currentUser.email });
-          toast('Profile saved');
-        }catch(err){ toast('Profile save error: '+err.message); }
-      });
+        <div class="p-6 glass rounded">
+          <h3 class="font-semibold accent mb-3">Change Password</h3>
+          <form id="passForm" class="space-y-3">
+            <input name="current" type="password" placeholder="Current password" class="w-full p-3 rounded bg-gray-900/60" required />
+            <input name="newpass" type="password" placeholder="New password (min 6)" class="w-full p-3 rounded bg-gray-900/60" required minlength="6" />
+            <button class="py-2 px-4 rounded bg-red-600">Change password</button>
+          </form>
+        </div>
+      </div>
+    `;
 
-      document.getElementById('passForm').addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const cur = ev.target.current.value;
-        const nw = ev.target.newpass.value;
-        try{
-          const cred = EmailAuthProvider.credential(auth.currentUser.email, cur);
-          await reauthenticateWithCredential(auth.currentUser, cred);
-          await updatePassword(auth.currentUser, nw);
-          toast('Password changed');
-          ev.target.reset();
-        }catch(err){ toast('Password change error: '+err.message); }
-      });
+      document.getElementById('profileForm').addEventListener('submit', async (ev)=>{ ev.preventDefault(); const name = ev.target.displayName.value.trim(); try{ if(auth.currentUser) { await updateProfile(auth.currentUser, { displayName: name }); await set(ref(db, `profiles/${auth.currentUser.uid}`), { displayName: name, email: auth.currentUser.email }); toast('Profile saved'); } else { const s = readLocal('vidya_session')||{}; s.displayName = name; writeLocal('vidya_session', s); toast('Local profile saved'); } }catch(err){ toast('Profile save error: '+err.message); } });
+
+      document.getElementById('passForm').addEventListener('submit', async (ev)=>{ ev.preventDefault(); const cur = ev.target.current.value; const nw = ev.target.newpass.value; try{ if(auth.currentUser){ const cred = EmailAuthProvider.credential(auth.currentUser.email, cur); await reauthenticateWithCredential(auth.currentUser, cred); await updatePassword(auth.currentUser, nw); toast('Password changed'); ev.target.reset(); } else { const s = readLocal('vidya_session'); if(!s) { toast('No local session'); return; } const ok = await verifyLocalUser(s.email, cur); if(!ok){ toast('Current password incorrect'); return; } await saveLocalUser(s.email, nw); toast('Local password changed'); } }catch(err){ toast('Password change error: '+err.message); } });
     }
 
-    // ----------------------------
-    // Small helper: escape HTML
-    // ----------------------------
-    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>\"]/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-    // ----------------------------
-    // Modals to add content
-    // ----------------------------
-    function showAddVideoModal(){
-      const modal = el(`
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/60" onclick="this.parentNode.remove()"></div>
-          <div class="relative bg-black/90 p-6 rounded w-full max-w-md glass">
-            <h3 class="font-semibold mb-3">Add Video</h3>
-            <form id="videoForm" class="space-y-3">
-              <input name="title" required placeholder="Title" class="w-full p-3 rounded bg-gray-900/60" />
-              <input name="subject" placeholder="Subject" class="w-full p-3 rounded bg-gray-900/60" />
-              <input name="url" required placeholder="Video URL (youtube/vimeo/... or file link)" class="w-full p-3 rounded bg-gray-900/60" />
-              <div class="flex gap-2 justify-end">
-                <button type="button" id="cancelVideo" class="py-2 px-3 rounded">Cancel</button>
-                <button class="py-2 px-3 rounded bg-cyan-600">Add</button>
-              </div>
-            </form>
-          </div>
+    function showAddVideoModal(){ const modal = el(`
+      <div class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60" onclick="this.parentNode.remove()"></div>
+        <div class="relative bg-black/90 p-6 rounded w-full max-w-md glass">
+          <h3 class="font-semibold mb-3">Add Video (admin)</h3>
+          <form id="videoForm" class="space-y-3">
+            <input name="title" required placeholder="Title" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="subject" placeholder="Subject" class="w-full p-3 rounded bg-gray-900/60" />
+            <div class="text-sm text-gray-400">Choose a local file to upload to Firebase Storage (recommended) or paste an external URL below.</div>
+            <input type="file" name="file" accept="video/*" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="url" placeholder="Video URL (youtube/vimeo/...)" class="w-full p-3 rounded bg-gray-900/60" />
+            <div class="flex gap-2 justify-end">
+              <button type="button" id="cancelVideo" class="py-2 px-3 rounded">Cancel</button>
+              <button class="py-2 px-3 rounded bg-cyan-600">Add</button>
+            </div>
+          </form>
         </div>
-      `);
+      </div>
+    `);
       document.body.appendChild(modal);
       modal.querySelector('#cancelVideo').addEventListener('click', ()=> modal.remove());
-      modal.querySelector('#videoForm').addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const t = ev.target.title.value.trim();
-        const s = ev.target.subject.value.trim();
-        const u = ev.target.url.value.trim();
-        try{
-          await addVideo({ title: t, subject: s, url: u, createdAt: Date.now(), uploader: auth.currentUser?.uid || 'anon' });
-          toast('Video added');
-          modal.remove();
-        }catch(err){ toast('Add video failed: '+err.message); }
-      });
-    }
+      modal.querySelector('#videoForm').addEventListener('submit', async (ev)=>{ ev.preventDefault(); const t = ev.target.title.value.trim(); const s = ev.target.subject.value.trim(); const u = ev.target.url.value.trim(); const f = ev.target.file.files[0]; try{ let storageUrl = null; let mime = null; if(f){ mime = f.type; storageUrl = await uploadFileAndGetURL(f, 'videos'); } const meta = { title: t, subject: s, url: u||null, storageUrl: storageUrl||null, mime: mime||null, createdAt: Date.now(), uploader: auth.currentUser?.uid || readLocal('vidya_session')?.email || 'anon' }; await addVideoToDB(meta); addLog({ action: 'addVideo', email: auth.currentUser?.email||readLocal('vidya_session')?.email||'anon', success: true }); toast('Video added'); modal.remove(); }catch(err){ addLog({ action: 'addVideo', email: auth.currentUser?.email||'anon', success: false, error: err.message }); toast('Add video failed: '+err.message); } }); }
 
-    function showAddTuteModal(){
-      const modal = el(`
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/60" onclick="this.parentNode.remove()"></div>
-          <div class="relative bg-black/90 p-6 rounded w-full max-w-md glass">
-            <h3 class="font-semibold mb-3">Add Tute</h3>
-            <form id="tuteForm" class="space-y-3">
-              <input name="title" required placeholder="Title" class="w-full p-3 rounded bg-gray-900/60" />
-              <input name="subject" placeholder="Subject" class="w-full p-3 rounded bg-gray-900/60" />
-              <input name="url" required placeholder="File URL (drive/dropbox/... )" class="w-full p-3 rounded bg-gray-900/60" />
-              <div class="flex gap-2 justify-end">
-                <button type="button" id="cancelTute" class="py-2 px-3 rounded">Cancel</button>
-                <button class="py-2 px-3 rounded bg-cyan-600">Add</button>
-              </div>
-            </form>
-          </div>
+    function showAddTuteModal(){ const modal = el(`
+      <div class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/60" onclick="this.parentNode.remove()"></div>
+        <div class="relative bg-black/90 p-6 rounded w-full max-w-md glass">
+          <h3 class="font-semibold mb-3">Add Tute (admin)</h3>
+          <form id="tuteForm" class="space-y-3">
+            <input name="title" required placeholder="Title" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="subject" placeholder="Subject" class="w-full p-3 rounded bg-gray-900/60" />
+            <div class="text-sm text-gray-400">Upload a file (pdf/doc) or paste an external link.</div>
+            <input type="file" name="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="w-full p-3 rounded bg-gray-900/60" />
+            <input name="url" placeholder="File URL (drive/dropbox/...)" class="w-full p-3 rounded bg-gray-900/60" />
+            <div class="flex gap-2 justify-end">
+              <button type="button" id="cancelTute" class="py-2 px-3 rounded">Cancel</button>
+              <button class="py-2 px-3 rounded bg-cyan-600">Add</button>
+            </div>
+          </form>
         </div>
-      `);
+      </div>
+    `);
       document.body.appendChild(modal);
       modal.querySelector('#cancelTute').addEventListener('click', ()=> modal.remove());
-      modal.querySelector('#tuteForm').addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const t = ev.target.title.value.trim();
-        const s = ev.target.subject.value.trim();
-        const u = ev.target.url.value.trim();
-        try{
-          await addTute({ title: t, subject: s, url: u, createdAt: Date.now(), uploader: auth.currentUser?.uid || 'anon' });
-          toast('Tute added');
-          modal.remove();
-        }catch(err){ toast('Add tute failed: '+err.message); }
-      });
-    }
+      modal.querySelector('#tuteForm').addEventListener('submit', async (ev)=>{ ev.preventDefault(); const t = ev.target.title.value.trim(); const s = ev.target.subject.value.trim(); const u = ev.target.url.value.trim(); const f = ev.target.file.files[0]; try{ let storageUrl = null; let mime = null; if(f){ mime = f.type; storageUrl = await uploadFileAndGetURL(f, 'tutes'); } const meta = { title: t, subject: s, url: u||null, storageUrl: storageUrl||null, mime: mime||null, createdAt: Date.now(), uploader: auth.currentUser?.uid || readLocal('vidya_session')?.email || 'anon' }; await addTuteToDB(meta); addLog({ action: 'addTute', email: auth.currentUser?.email||readLocal('vidya_session')?.email||'anon', success: true }); toast('Tute added'); modal.remove(); }catch(err){ addLog({ action: 'addTute', email: auth.currentUser?.email||'anon', success: false, error: err.message }); toast('Add tute failed: '+err.message); } }); }
 
-    // ----------------------------
-    // Main render function
-    // ----------------------------
-    function render(){
-      // Update auth area
-      const user = auth.currentUser;
-      if(user){
-        authArea.innerHTML = `
-          <div class=\"text-sm text-gray-300 mr-4\">${escapeHtml(user.email||'')}</div>
-          <button id=\"btnSignOut\" class=\"py-2 px-3 rounded bg-red-600\">Sign out</button>
-        `;
-        document.getElementById('btnSignOut').addEventListener('click', handleSignOut);
-        sideName.textContent = user.displayName || 'Student';
-        sideEmail.textContent = user.email || '';
-      }else{
-        authArea.innerHTML = `
-          <button id=\"btnToLogin\" class=\"py-2 px-3 rounded bg-cyan-600\">Login</button>
-          <button id=\"btnToRegister\" class=\"py-2 px-3 rounded border border-gray-700\">Register</button>
-        `;
-        document.getElementById('btnToLogin').addEventListener('click', ()=> navigate('login'));
-        document.getElementById('btnToRegister').addEventListener('click', ()=> navigate('register'));
-        sideName.textContent = 'Guest'; sideEmail.textContent = 'Not signed in';
-      }
+    function render(){ const firebaseUser = auth.currentUser; const localSession = readLocal('vidya_session');
+      if(firebaseUser){ authArea.innerHTML = ` <div class="text-sm text-gray-300 mr-4">${escapeHtml(firebaseUser.email||'')}</div> <button id="btnSignOut" class="py-2 px-3 rounded bg-red-600">Sign out</button>`; document.getElementById('btnSignOut').addEventListener('click', handleSignOut); sideName.textContent = firebaseUser.displayName || 'Student'; sideEmail.textContent = firebaseUser.email || ''; }
+      else if(localSession){ authArea.innerHTML = ` <div class="text-sm text-gray-300 mr-4">${escapeHtml(localSession.email||'')}</div> <button id="btnSignOutLocal" class="py-2 px-3 rounded bg-red-600">Sign out</button>`; document.getElementById('btnSignOutLocal').addEventListener('click', ()=>{ localStorage.removeItem('vidya_session'); addLog({ action: 'signout_local', email: localSession.email }); render(); }); sideName.textContent = localSession.displayName || localSession.email || 'Student'; sideEmail.textContent = localSession.email || ''; }
+      else { authArea.innerHTML = ` <button id="btnToLogin" class="py-2 px-3 rounded bg-cyan-600">Login</button> <button id="btnToRegister" class="py-2 px-3 rounded border border-gray-700">Register</button>`; document.getElementById('btnToLogin').addEventListener('click', ()=> navigate('login')); document.getElementById('btnToRegister').addEventListener('click', ()=> navigate('register')); sideName.textContent = 'Guest'; sideEmail.textContent = 'Not signed in'; }
 
-      // highlight nav buttons
       document.querySelectorAll('.nav-btn').forEach(b=> b.classList.remove('bg-gray-800'));
       const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b=> b.dataset.page===currentPage);
       if(activeBtn) activeBtn.classList.add('bg-gray-800');
 
-      // render page
-      if(currentPage === 'login') renderLogin();
-      else if(currentPage === 'register') renderRegister();
-      else if(currentPage === 'dashboard') renderDashboard();
-      else if(currentPage === 'videos') renderVideos();
-      else if(currentPage === 'tutes') renderTutes();
-      else if(currentPage === 'profile') renderProfile();
-      else renderLogin();
+      if(currentPage === 'login') renderLogin(); else if(currentPage === 'register') renderRegister(); else if(currentPage === 'dashboard') renderDashboard(); else if(currentPage === 'videos') renderVideos(); else if(currentPage === 'tutes') renderTutes(); else if(currentPage === 'profile') renderProfile(); else renderLogin();
     }
 
-    // nav buttons in sidebar
     document.querySelectorAll('.nav-btn').forEach(b=> b.addEventListener('click', ()=>{ navigate(b.dataset.page); }));
 
-    // ----------------------------
-    // Auth state listener
-    // ----------------------------
-    onAuthStateChanged(auth, (user)=>{
-      if(user){
-        // default landing page
-        if(currentPage === 'login' || currentPage === 'register') currentPage = 'dashboard';
-      } else {
-        currentPage = 'login';
-      }
-      render();
-    });
+    onAuthStateChanged(auth, (user)=>{ if(user){ localStorage.removeItem('vidya_session'); if(currentPage === 'login' || currentPage === 'register') currentPage = 'dashboard'; } else { if(!readLocal('vidya_session')) currentPage = 'login'; } render(); });
 
-    // initial render
     render();
 
-    // ----------------------------
-    // Notes & next steps for you:
-    //  - Replace firebaseConfig fields (apiKey, authDomain, etc.) with your project's values.
-    //  - If you want file uploads (for tutes/videos) use Firebase Storage and generate share URLs.
-    //  - For production, enforce security rules in Realtime Database so only authorized users can write.
-    // ----------------------------
+    window.vidya = { addLog, getLogs, downloadLogsFile, readLocal, writeLocal };
   </script>
 </body>
 </html>
